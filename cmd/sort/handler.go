@@ -59,12 +59,26 @@ func routeMiddleware(next http.Handler) http.Handler {
 		ctx, _ := tag.New(r.Context(), tag.Insert(RouteKey, route))
 		traceID := getTraceID(r)
 		logger := log.New(log.Writer(), traceID, log.LstdFlags|log.Lmsgprefix)
-
+		counter := countingWriter{w, 0}
 		start := time.Now()
 
-		logger.Println(r.URL.String())
 		stats.Record(ctx, Requests.M(1))
-		next.ServeHTTP(w, r)
-		stats.Record(ctx, RequestTime.M(time.Since(start).Milliseconds()/1000))
+		next.ServeHTTP(&counter, r)
+
+		done := time.Since(start).Milliseconds()
+
+		stats.Record(ctx, RequestTime.M(done/1000))
+		logger.Println(r.URL.String(), done, counter.size)
 	})
+}
+
+type countingWriter struct {
+	http.ResponseWriter
+	size int
+}
+
+func (w *countingWriter) Write(b []byte) (int, error) {
+	n, err := w.ResponseWriter.Write(b)
+	w.size += n
+	return n, err
 }

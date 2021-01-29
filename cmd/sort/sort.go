@@ -10,53 +10,23 @@ import (
 	"time"
 )
 
-type entry uint8
-
-const (
-	gray entry = iota
-	maroon
-	red
-	orange
-	yellow
-	olive
-	chartreuse
-	green
-	lime
-	teal
-	aqua
-	sky
-	blue
-	navy
-	purple
-	violet
-)
-
-type paletteColor struct {
-	name entry
-	rgb  color.RGBA
-}
-
-func (p paletteColor) RGBA() (r, g, b, a uint32) {
-	return p.rgb.RGBA()
-}
-
 var rainbow = color.Palette{
-	&paletteColor{gray, color.RGBA{120, 120, 120, 255}},
-	&paletteColor{maroon, color.RGBA{128, 0, 0, 255}},
-	&paletteColor{red, color.RGBA{255, 0, 0, 255}},
-	&paletteColor{orange, color.RGBA{255, 128, 0, 255}},
-	&paletteColor{yellow, color.RGBA{255, 255, 0, 255}},
-	&paletteColor{olive, color.RGBA{128, 128, 0, 255}},
-	&paletteColor{chartreuse, color.RGBA{128, 255, 0, 255}},
-	&paletteColor{green, color.RGBA{0, 128, 0, 255}},
-	&paletteColor{lime, color.RGBA{0, 255, 0, 255}},
-	&paletteColor{teal, color.RGBA{0, 128, 128, 255}},
-	&paletteColor{aqua, color.RGBA{0, 255, 255, 255}},
-	&paletteColor{sky, color.RGBA{0, 128, 255, 255}},
-	&paletteColor{blue, color.RGBA{0, 0, 255, 255}},
-	&paletteColor{navy, color.RGBA{0, 0, 128, 255}},
-	&paletteColor{purple, color.RGBA{128, 0, 128, 255}},
-	&paletteColor{violet, color.RGBA{128, 0, 255, 255}},
+	&color.RGBA{120, 120, 120, 255}, // gray
+	&color.RGBA{128, 0, 0, 255},     // maroon
+	&color.RGBA{255, 0, 0, 255},     // red
+	&color.RGBA{255, 128, 0, 255},   // orange
+	&color.RGBA{255, 255, 0, 255},   // yellow
+	&color.RGBA{128, 128, 0, 255},   // olive
+	&color.RGBA{128, 255, 0, 255},   // chartreuse
+	&color.RGBA{0, 128, 0, 255},     // green
+	&color.RGBA{0, 255, 0, 255},     // lime
+	&color.RGBA{0, 128, 128, 255},   // teal
+	&color.RGBA{0, 255, 255, 255},   // aqua
+	&color.RGBA{0, 128, 255, 255},   // sky
+	&color.RGBA{0, 0, 255, 255},     // blue
+	&color.RGBA{0, 0, 128, 255},     // navy
+	&color.RGBA{128, 0, 128, 255},   // purple
+	&color.RGBA{128, 0, 255, 255},   // violet
 }
 
 const (
@@ -67,19 +37,19 @@ const (
 
 var source = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-func makeRandSlice(n int) []entry {
+func makeRandSlice(n int) []int {
 	length := len(rainbow) - 1
-	result := make([]entry, n)
+	result := make([]int, n)
 
 	for i := range result {
 		// never the default color (here gray)
-		result[i] = entry(source.Intn(length) + 1)
+		result[i] = source.Intn(length) + 1
 	}
 
 	return result
 }
 
-func paintSquare(i, k int, src []entry, img *image.Paletted) {
+func paintSquare(i, k int, src []int, img *image.Paletted) {
 	// lay down a square with an outline using the default
 	// color (gray; we deliberately excluded it from the data)
 
@@ -96,9 +66,9 @@ func paintSquare(i, k int, src []entry, img *image.Paletted) {
 	}
 }
 
-func animate(out io.Writer, loop, delay int, sort func(int, []entry) int) {
+func animate(out io.Writer, loop, delay int, sort func(int, []int) int) {
 	array := makeRandSlice(n)
-	step := make([][]entry, n)
+	step := make([][]int, n)
 	anim := gif.GIF{LoopCount: loop}
 
 	for i := 0; i < n; i++ {
@@ -108,7 +78,7 @@ func animate(out io.Writer, loop, delay int, sort func(int, []entry) int) {
 		// at each step we'll copy the array after
 		// sorting it so we can draw the right view
 
-		step[i] = make([]entry, n)
+		step[i] = make([]int, n)
 
 		c := sort(i, array)
 
@@ -126,7 +96,7 @@ func animate(out io.Writer, loop, delay int, sort func(int, []entry) int) {
 				// we use the current step unless we're at a row and
 				// column that should show the previous state
 
-				var src []entry = step[i]
+				var src []int = step[i]
 
 				if k < i && id <= c {
 					src = step[k]
@@ -144,12 +114,12 @@ func animate(out io.Writer, loop, delay int, sort func(int, []entry) int) {
 }
 
 type qsort struct {
-	part  func(int, int, []entry) (int, int)
+	part  func(int, int, []int) (int, int)
 	stack []int
 }
 
 // Lomuto's partition (see also Programming Pearls)
-func partHigh(l, h int, A []entry) (int, int) {
+func partHigh(l, h int, A []int) (int, int) {
 	pivot := A[h]
 	i := l - 1
 
@@ -167,7 +137,7 @@ func partHigh(l, h int, A []entry) (int, int) {
 }
 
 // Hoare's original partition
-func partMiddle(l, h int, array []entry) (int, int) {
+func partMiddle(l, h int, array []int) (int, int) {
 	i := (h + l) / 2
 	pivot := array[i]
 
@@ -192,7 +162,7 @@ func partMiddle(l, h int, array []entry) (int, int) {
 
 // Lomuto & median-of-three, but we use insertion sort
 // for short subarrays (can't really see this animated)
-func partInsert(l, h int, array []entry) (int, int) {
+func partInsert(l, h int, array []int) (int, int) {
 	if j := h - l + 1; j < 7 {
 		for i := 0; i < j; i++ {
 			insertionStep(i, array[l:h+1])
@@ -205,7 +175,7 @@ func partInsert(l, h int, array []entry) (int, int) {
 }
 
 // Lomuto using median-of-three as a pivot choice
-func partMedian(l, h int, array []entry) (int, int) {
+func partMedian(l, h int, array []int) (int, int) {
 	m := (l + h) / 2
 
 	if array[m] < array[l] {
@@ -235,7 +205,7 @@ func (q *qsort) pop() (l, h int) {
 	return
 }
 
-func (q *qsort) qsStep(i int, array []entry) int {
+func (q *qsort) qsStep(i int, array []int) int {
 	if i == 0 {
 		// we do this so the first frame is always untouched
 
@@ -271,7 +241,7 @@ func (q *qsort) qsStep(i int, array []entry) int {
 // This is the dutch-flag three-way partition based
 // on picking the middle entry as the pivot; it needs
 // a slightly different quicksort step (below)
-func partFlag(l, h int, A []entry) (int, int) {
+func partFlag(l, h int, A []int) (int, int) {
 	p := (h + l) / 2
 	pivot := A[p]
 
@@ -291,7 +261,7 @@ func partFlag(l, h int, A []entry) (int, int) {
 	return l, h
 }
 
-func (q *qsort) qsStepFlag(i int, array []entry) int {
+func (q *qsort) qsStepFlag(i int, array []int) int {
 	if i == 0 {
 		// we do this so the first frame is always untouched
 
@@ -349,7 +319,7 @@ func qsortFlag(w http.ResponseWriter, r *http.Request) {
 	animate(w, getLoop(r), getDelay(r), q.qsStepFlag)
 }
 
-func insertionStep(i int, array []entry) int {
+func insertionStep(i int, array []int) int {
 	for j := i; j > 0 && array[j] < array[j-1]; j-- {
 		array[j], array[j-1] = array[j-1], array[j]
 	}

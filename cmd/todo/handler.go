@@ -2,26 +2,21 @@ package main
 
 import (
 	"encoding/json"
+	"html/template"
 	"log"
 	"net/http"
 	"strings"
-	"text/template"
-
-	"go.opencensus.io/stats"
-	"go.opencensus.io/tag"
 )
 
 const (
 	url      = "https://jsonplaceholder.typicode.com"
 	cloudKey = "X-Cloud-Trace-Context"
-	emailKey = "X-Goog-Authenticated-User-Email"
 )
 
 type todo struct {
 	UserID    int    `json:"userID"`
 	ID        int    `json:"id"`
 	Title     string `json:"title"`
-	User      string `json:"user"`
 	Trace     string `json:"trace"`
 	Completed bool   `json:"completed"`
 }
@@ -34,23 +29,8 @@ func getTraceID(r *http.Request) string {
 	return ""
 }
 
-func getUser(r *http.Request) string {
-	if email := r.Header.Get(emailKey); email != "" {
-		s := strings.Split(email, ":")
-
-		if len(s) < 2 {
-			return s[0]
-		}
-
-		return s[1]
-	}
-
-	return ""
-}
-
 func handler(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Path[1:]
-	user := getUser(r)
 	traceID := getTraceID(r)
 	logger := log.New(log.Writer(), traceID, log.LstdFlags|log.Lmsgprefix)
 
@@ -70,9 +50,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	ctx, _ := tag.New(r.Context(), tag.Insert(UserKey, user))
-	stats.Record(ctx, Requests.M(1))
 
 	cli := &http.Client{Transport: &http.Transport{}}
 	resp, err := cli.Do(req)
@@ -101,9 +78,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	item.Trace = traceID
-	item.User = user
 
-	logger.Printf("%s: found %s: %s", user, key, item.Title)
+	logger.Printf("found %s: %s", key, item.Title)
 
 	tmpl := template.New("todo")
 
@@ -115,4 +91,4 @@ var form = `
 <h1>Todo #{{.ID}}</h1>
 <div>{{printf "User %d" .UserID}}</div>
 <div>{{printf "%s (completed: %t)" .Title .Completed}}</div>
-<div>{{printf "User %s [Trace %s]" .User .Trace}}</div>`
+<div>{{printf "[Trace %s]" .Trace}}</div>`
