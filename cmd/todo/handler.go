@@ -23,7 +23,7 @@ type todo struct {
 
 func getTraceID(r *http.Request) string {
 	if traceKey := r.Header.Get(cloudKey); traceKey != "" {
-		return strings.Split(traceKey, "/")[0] + " "
+		return strings.Split(traceKey, "/")[0]
 	}
 
 	return ""
@@ -32,7 +32,7 @@ func getTraceID(r *http.Request) string {
 func handler(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Path[1:]
 	traceID := getTraceID(r)
-	logger := log.New(log.Writer(), traceID, log.LstdFlags|log.Lmsgprefix)
+	logger := log.New(log.Writer(), traceID+" ", log.LstdFlags|log.Lmsgprefix)
 
 	if key == "" {
 		logger.Println("empty request")

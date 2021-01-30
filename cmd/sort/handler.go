@@ -27,7 +27,7 @@ type todo struct {
 
 func getTraceID(r *http.Request) string {
 	if traceKey := r.Header.Get(cloudKey); traceKey != "" {
-		return strings.Split(traceKey, "/")[0] + " "
+		return strings.Split(traceKey, "/")[0]
 	}
 
 	return ""
@@ -58,7 +58,7 @@ func routeMiddleware(next http.Handler) http.Handler {
 		route := strings.Split(r.URL.Path[1:], "?")[0]
 		ctx, _ := tag.New(r.Context(), tag.Insert(RouteKey, route))
 		traceID := getTraceID(r)
-		logger := log.New(log.Writer(), traceID, log.LstdFlags|log.Lmsgprefix)
+		logger := log.New(log.Writer(), traceID+" ", log.LstdFlags|log.Lmsgprefix)
 		counter := countingWriter{w, 0}
 		start := time.Now()
 
